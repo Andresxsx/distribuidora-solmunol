@@ -10,10 +10,11 @@ class ViewCliente extends ViewRecord
 {
     protected static string $resource = ClienteResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            EditAction::make(),
-        ];
-    }
+   protected function getHeaderActions(): array
+{
+    return [
+        EditAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

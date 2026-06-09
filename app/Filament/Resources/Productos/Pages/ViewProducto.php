@@ -11,9 +11,10 @@ class ViewProducto extends ViewRecord
     protected static string $resource = ProductoResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            EditAction::make(),
-        ];
-    }
+{
+    return [
+        EditAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

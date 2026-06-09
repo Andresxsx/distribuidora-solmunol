@@ -11,9 +11,10 @@ class ViewCompra extends ViewRecord
     protected static string $resource = CompraResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            EditAction::make(),
-        ];
-    }
+{
+    return [
+        EditAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

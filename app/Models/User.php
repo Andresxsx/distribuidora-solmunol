@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'rol'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -29,4 +29,29 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function esAdministrador(): bool
+{
+    return $this->rol === 'Administrador';
+}
+
+public function esOperativo(): bool
+{
+    return $this->rol === 'Operativo';
+}
+
+public function esDirectivo(): bool
+{
+    return $this->rol === 'Directivo';
+}
+
+public function puedeGestionarRegistros(): bool
+{
+    return in_array($this->rol, ['Administrador', 'Operativo'], true);
+}
+
+public function puedeConsultarDirectivo(): bool
+{
+    return in_array($this->rol, ['Administrador', 'Directivo'], true);
+}
 }

@@ -11,11 +11,13 @@ class EditEmpleado extends EditRecord
 {
     protected static string $resource = EmpleadoResource::class;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            ViewAction::make(),
-            DeleteAction::make(),
-        ];
-    }
+   protected function getHeaderActions(): array
+{
+    return [
+        ViewAction::make(),
+
+        DeleteAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

@@ -15,67 +15,87 @@ class EmpleadosTable
     {
         return $table
             ->columns([
-    TextColumn::make('codigo_empleado')
-        ->label('Código')
-        ->searchable()
-        ->sortable(),
+                TextColumn::make('codigo_empleado')
+                    ->label('Código')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('cedula')
-        ->label('Cédula')
-        ->searchable(),
+                TextColumn::make('cedula')
+                    ->label('Cédula')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('nombres')
-        ->label('Nombres')
-        ->searchable(),
+                TextColumn::make('nombres')
+                    ->label('Nombres')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('apellidos')
-        ->label('Apellidos')
-        ->searchable(),
+                TextColumn::make('apellidos')
+                    ->label('Apellidos')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('cargo')
-        ->label('Cargo')
-        ->searchable(),
+                TextColumn::make('cargo')
+                    ->label('Cargo')
+                    ->searchable(),
 
-    TextColumn::make('departamento')
-        ->label('Departamento')
-        ->searchable(),
+                TextColumn::make('departamento')
+                    ->label('Departamento')
+                    ->searchable(),
 
-    TextColumn::make('telefono')
-        ->label('Celular'),
+                TextColumn::make('telefono')
+                    ->label('Celular')
+                    ->searchable(),
 
-    TextColumn::make('correo')
-        ->label('Correo'),
+                TextColumn::make('correo')
+                    ->label('Correo')
+                    ->searchable()
+                    ->limit(30),
 
-    TextColumn::make('sueldo')
-        ->label('Sueldo')
-        ->money('USD')
-        ->sortable(),
+                TextColumn::make('sueldo')
+                    ->label('Sueldo')
+                    ->money('USD')
+                    ->sortable(),
 
-    TextColumn::make('fecha_ingreso')
-        ->label('Fecha ingreso')
-        ->date()
-        ->sortable(),
+                TextColumn::make('fecha_ingreso')
+                    ->label('Fecha ingreso')
+                    ->date('d/m/Y')
+                    ->sortable(),
 
-    TextColumn::make('estado')
-        ->label('Estado')
-        ->badge(),
+                TextColumn::make('estado')
+                    ->label('Estado')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Activo' => 'success',
+                        'Inactivo' => 'danger',
+                        'Suspendido' => 'warning',
+                        'Retirado' => 'gray',
+                        default => 'gray',
+                    }),
 
-    TextColumn::make('created_at')
-        ->label('Registrado')
-        ->dateTime()
-        ->sortable(),
-])
+                TextColumn::make('created_at')
+                    ->label('Registrado')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
+            ])
             ->filters([
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+    ViewAction::make()
+        ->label('Ver'),
+
+    EditAction::make()
+        ->label('Editar')
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+])
+->toolbarActions([
+    BulkActionGroup::make([
+        DeleteBulkAction::make()
+            ->label('Eliminar seleccionados')
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ])
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+]);
     }
 }

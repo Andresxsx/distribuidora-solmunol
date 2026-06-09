@@ -12,10 +12,12 @@ class EditProducto extends EditRecord
     protected static string $resource = ProductoResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            ViewAction::make(),
-            DeleteAction::make(),
-        ];
-    }
+{
+    return [
+        ViewAction::make(),
+
+        DeleteAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

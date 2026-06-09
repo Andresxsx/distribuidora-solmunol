@@ -15,44 +15,62 @@ class ClientesTable
     {
         return $table
             ->columns([
-    TextColumn::make('cedula_ruc')
-        ->label('Cédula / RUC')
-        ->searchable(),
+                TextColumn::make('cedula_ruc')
+                    ->label('Cédula / RUC')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('nombre')
-        ->label('Cliente')
-        ->searchable(),
+                TextColumn::make('nombre')
+                    ->label('Cliente')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('telefono')
-        ->label('Teléfono'),
+                TextColumn::make('telefono')
+                    ->label('Teléfono')
+                    ->searchable(),
 
-    TextColumn::make('correo')
-        ->label('Correo'),
+                TextColumn::make('correo')
+                    ->label('Correo')
+                    ->searchable()
+                    ->limit(30),
 
-    TextColumn::make('direccion')
-        ->label('Dirección')
-        ->limit(30),
+                TextColumn::make('direccion')
+                    ->label('Dirección')
+                    ->limit(35)
+                    ->searchable(),
 
-    TextColumn::make('estado')
-        ->label('Estado')
-        ->badge(),
+                TextColumn::make('estado')
+                    ->label('Estado')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Activo' => 'success',
+                        'Inactivo' => 'danger',
+                        default => 'gray',
+                    }),
 
-    TextColumn::make('created_at')
-        ->label('Registrado')
-        ->dateTime()
-        ->sortable(),
-])
+                TextColumn::make('created_at')
+                    ->label('Registrado')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
+            ])
             ->filters([
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+    ViewAction::make()
+        ->label('Ver'),
+
+    EditAction::make()
+        ->label('Editar')
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+])
+->toolbarActions([
+    BulkActionGroup::make([
+        DeleteBulkAction::make()
+            ->label('Eliminar seleccionados')
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ])
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+]);
     }
 }

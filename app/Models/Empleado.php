@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FormatoDatos;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -35,11 +36,27 @@ class Empleado extends Model
         });
 
         static::saving(function (Empleado $empleado) {
-            $empleado->cedula = preg_replace('/\D/', '', (string) $empleado->cedula);
-            $empleado->telefono = preg_replace('/\D/', '', (string) $empleado->telefono);
-            $empleado->nombres = trim(preg_replace('/\s+/', ' ', (string) $empleado->nombres));
-            $empleado->apellidos = trim(preg_replace('/\s+/', ' ', (string) $empleado->apellidos));
-            $empleado->correo = trim(strtolower((string) $empleado->correo));
+            /*
+            |--------------------------------------------------------------------------
+            | 1. Normalización de datos
+            |--------------------------------------------------------------------------
+            */
+
+            $empleado->codigo_empleado = FormatoDatos::codigo($empleado->codigo_empleado);
+            $empleado->cedula = FormatoDatos::soloNumeros($empleado->cedula);
+            $empleado->nombres = FormatoDatos::nombrePersona($empleado->nombres);
+            $empleado->apellidos = FormatoDatos::nombrePersona($empleado->apellidos);
+            $empleado->cargo = FormatoDatos::espacios($empleado->cargo);
+            $empleado->departamento = FormatoDatos::espacios($empleado->departamento);
+            $empleado->telefono = FormatoDatos::soloNumeros($empleado->telefono);
+            $empleado->correo = FormatoDatos::correo($empleado->correo);
+            $empleado->estado = FormatoDatos::estado($empleado->estado);
+
+            /*
+            |--------------------------------------------------------------------------
+            | 2. Validaciones
+            |--------------------------------------------------------------------------
+            */
 
             if (! self::validarCedulaEcuador($empleado->cedula)) {
                 throw ValidationException::withMessages([
@@ -47,15 +64,37 @@ class Empleado extends Model
                 ]);
             }
 
-            if (! preg_match('/^[\pL\s]+$/u', $empleado->nombres) || mb_strlen($empleado->nombres) < 2 || mb_strlen($empleado->nombres) > 80) {
+            $cedulaDuplicada = self::where('cedula', $empleado->cedula)
+                ->when($empleado->exists, fn ($query) => $query->where('id', '!=', $empleado->id))
+                ->exists();
+
+            if ($cedulaDuplicada) {
                 throw ValidationException::withMessages([
-                    'nombres' => 'Los nombres deben contener solo letras y tener entre 2 y 80 caracteres.',
+                    'cedula' => 'Ya existe un empleado registrado con esta cédula.',
                 ]);
             }
 
-            if (! preg_match('/^[\pL\s]+$/u', $empleado->apellidos) || mb_strlen($empleado->apellidos) < 2 || mb_strlen($empleado->apellidos) > 80) {
+            if (mb_strlen($empleado->nombres) < 2 || mb_strlen($empleado->nombres) > 80) {
                 throw ValidationException::withMessages([
-                    'apellidos' => 'Los apellidos deben contener solo letras y tener entre 2 y 80 caracteres.',
+                    'nombres' => 'Los nombres deben tener entre 2 y 80 caracteres.',
+                ]);
+            }
+
+            if (! preg_match('/^[\pL\s]+$/u', $empleado->nombres)) {
+                throw ValidationException::withMessages([
+                    'nombres' => 'Los nombres solo pueden contener letras y espacios.',
+                ]);
+            }
+
+            if (mb_strlen($empleado->apellidos) < 2 || mb_strlen($empleado->apellidos) > 80) {
+                throw ValidationException::withMessages([
+                    'apellidos' => 'Los apellidos deben tener entre 2 y 80 caracteres.',
+                ]);
+            }
+
+            if (! preg_match('/^[\pL\s]+$/u', $empleado->apellidos)) {
+                throw ValidationException::withMessages([
+                    'apellidos' => 'Los apellidos solo pueden contener letras y espacios.',
                 ]);
             }
 
@@ -73,7 +112,7 @@ class Empleado extends Model
 
             if (! preg_match('/^09[0-9]{8}$/', $empleado->telefono)) {
                 throw ValidationException::withMessages([
-                    'telefono' => 'El teléfono debe ser un celular ecuatoriano válido. Ejemplo: 09XXXXXXXX.',
+                    'telefono' => 'El teléfono debe ser un celular ecuatoriano válido. Ejemplo: 0993050589.',
                 ]);
             }
 
@@ -83,19 +122,31 @@ class Empleado extends Model
                 ]);
             }
 
+            if (mb_strlen($empleado->correo) > 100) {
+                throw ValidationException::withMessages([
+                    'correo' => 'El correo no debe superar los 100 caracteres.',
+                ]);
+            }
+
             if ((float) $empleado->sueldo <= 0) {
                 throw ValidationException::withMessages([
                     'sueldo' => 'El sueldo debe ser mayor a cero.',
                 ]);
             }
 
-            if ($empleado->fecha_ingreso && $empleado->fecha_ingreso->isFuture()) {
+            if (! $empleado->fecha_ingreso) {
+                throw ValidationException::withMessages([
+                    'fecha_ingreso' => 'La fecha de ingreso es obligatoria.',
+                ]);
+            }
+
+            if ($empleado->fecha_ingreso->isFuture()) {
                 throw ValidationException::withMessages([
                     'fecha_ingreso' => 'La fecha de ingreso no puede ser futura.',
                 ]);
             }
 
-            if (! in_array($empleado->estado, ['Activo', 'Inactivo', 'Suspendido', 'Retirado'])) {
+            if (! in_array($empleado->estado, ['Activo', 'Inactivo', 'Suspendido', 'Retirado'], true)) {
                 throw ValidationException::withMessages([
                     'estado' => 'Seleccione un estado válido.',
                 ]);
@@ -167,7 +218,7 @@ class Empleado extends Model
             'Asistente administrativo',
             'Jefe de talento humano',
             'Analista de sistemas',
-        ]);
+        ], true);
     }
 
     private static function departamentoValido(string $departamento): bool
@@ -181,6 +232,6 @@ class Empleado extends Model
             'Ventas',
             'Contabilidad',
             'Sistemas',
-        ]);
+        ], true);
     }
 }

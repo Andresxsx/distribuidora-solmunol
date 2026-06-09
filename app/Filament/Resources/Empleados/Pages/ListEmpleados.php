@@ -11,9 +11,10 @@ class ListEmpleados extends ListRecords
     protected static string $resource = EmpleadoResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            CreateAction::make(),
-        ];
-    }
+{
+    return [
+        CreateAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

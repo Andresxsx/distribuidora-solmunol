@@ -1,0 +1,48 @@
+ARCHIVOS PARA SUBIR DISTRIBUIDORA SOLMUNOL A RENDER + SUPABASE
+
+1. Copia estos 3 archivos en la raíz del proyecto Laravel, donde está el archivo artisan:
+   - Dockerfile
+   - start.sh
+   - .dockerignore
+
+2. No copies este archivo INSTRUCCIONES.txt si no quieres. Solo es guía.
+
+3. Después abre la terminal en tu proyecto:
+   cd C:\Users\HP\Desktop\erp_solis
+
+4. Genera la APP_KEY de producción:
+   php artisan key:generate --show
+
+5. Sube cambios a GitHub:
+   git add .
+   git commit -m "Preparar despliegue Render Supabase"
+   git push
+
+6. En Render crea un Web Service con Environment Docker.
+
+7. Variables importantes en Render:
+   APP_NAME=Distribuidora Solmunol
+   APP_ENV=production
+   APP_KEY=base64:TU_KEY_GENERADA
+   APP_DEBUG=false
+   APP_URL=https://TU_URL_DE_RENDER
+   APP_LOCALE=es
+   APP_FALLBACK_LOCALE=es
+   APP_FAKER_LOCALE=es_EC
+   APP_TIMEZONE=America/Guayaquil
+   LOG_CHANNEL=stderr
+   LOG_LEVEL=debug
+   DB_CONNECTION=pgsql
+   DB_HOST=TU_HOST_DE_SUPABASE
+   DB_PORT=5432
+   DB_DATABASE=postgres
+   DB_USERNAME=TU_USUARIO_DE_SUPABASE
+   DB_PASSWORD=TU_PASSWORD_DE_SUPABASE
+   SESSION_DRIVER=file
+   CACHE_STORE=file
+   QUEUE_CONNECTION=sync
+   GOOGLE_AI_API_KEY=TU_API_KEY_DE_GOOGLE
+   GOOGLE_AI_MODEL=gemini-2.5-flash
+   VITE_APP_NAME=Distribuidora Solmunol
+
+8. Si Render te da error 500, revisa Logs en Render y pásame el error exacto.

@@ -11,9 +11,10 @@ class ViewEmpleado extends ViewRecord
     protected static string $resource = EmpleadoResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            EditAction::make(),
-        ];
-    }
+{
+    return [
+        EditAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FormatoDatos;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -21,11 +22,24 @@ class Proveedor extends Model
     protected static function booted(): void
     {
         static::saving(function (Proveedor $proveedor) {
-            $proveedor->ruc = preg_replace('/\D/', '', (string) $proveedor->ruc);
-            $proveedor->telefono = preg_replace('/\D/', '', (string) $proveedor->telefono);
-            $proveedor->nombre = trim(preg_replace('/\s+/', ' ', (string) $proveedor->nombre));
-            $proveedor->correo = trim(strtolower((string) $proveedor->correo));
-            $proveedor->direccion = trim(preg_replace('/\s+/', ' ', (string) $proveedor->direccion));
+            /*
+            |--------------------------------------------------------------------------
+            | 1. Normalización de datos
+            |--------------------------------------------------------------------------
+            */
+
+            $proveedor->ruc = FormatoDatos::soloNumeros($proveedor->ruc);
+            $proveedor->nombre = FormatoDatos::razonSocial($proveedor->nombre);
+            $proveedor->telefono = FormatoDatos::soloNumeros($proveedor->telefono);
+            $proveedor->correo = FormatoDatos::correo($proveedor->correo);
+            $proveedor->direccion = FormatoDatos::direccion($proveedor->direccion);
+            $proveedor->estado = FormatoDatos::estado($proveedor->estado);
+
+            /*
+            |--------------------------------------------------------------------------
+            | 2. Validaciones
+            |--------------------------------------------------------------------------
+            */
 
             if (! self::validarRucEcuador($proveedor->ruc)) {
                 throw ValidationException::withMessages([
@@ -33,9 +47,21 @@ class Proveedor extends Model
                 ]);
             }
 
+            if (mb_strlen($proveedor->nombre) < 3 || mb_strlen($proveedor->nombre) > 150) {
+                throw ValidationException::withMessages([
+                    'nombre' => 'La razón social debe tener entre 3 y 150 caracteres.',
+                ]);
+            }
+
+            if (! preg_match('/^[\pL\pN\s.,&\/()\-]+$/u', $proveedor->nombre)) {
+                throw ValidationException::withMessages([
+                    'nombre' => 'La razón social solo puede contener letras, números, espacios y signos básicos.',
+                ]);
+            }
+
             if (! self::validarTelefonoEcuador($proveedor->telefono)) {
                 throw ValidationException::withMessages([
-                    'telefono' => 'El teléfono debe ser ecuatoriano válido. Ejemplo celular: 09XXXXXXXX o convencional: 02XXXXXXX.',
+                    'telefono' => 'El teléfono debe ser válido para Ecuador. Use celular 09XXXXXXXX o convencional 02XXXXXXX, 04XXXXXXX, etc.',
                 ]);
             }
 
@@ -45,15 +71,9 @@ class Proveedor extends Model
                 ]);
             }
 
-            if (mb_strlen($proveedor->nombre) < 3 || mb_strlen($proveedor->nombre) > 150) {
+            if (mb_strlen($proveedor->correo) > 100) {
                 throw ValidationException::withMessages([
-                    'nombre' => 'El nombre o razón social debe tener entre 3 y 150 caracteres.',
-                ]);
-            }
-
-            if (! preg_match('/^[\pL\pN\s.,&\/()\-]+$/u', $proveedor->nombre)) {
-                throw ValidationException::withMessages([
-                    'nombre' => 'El nombre solo puede contener letras, números, espacios, puntos, comas, guiones, &, / y paréntesis.',
+                    'correo' => 'El correo no debe superar los 100 caracteres.',
                 ]);
             }
 
@@ -63,7 +83,7 @@ class Proveedor extends Model
                 ]);
             }
 
-            if (! in_array($proveedor->estado, ['Activo', 'Inactivo'])) {
+            if (! in_array($proveedor->estado, ['Activo', 'Inactivo'], true)) {
                 throw ValidationException::withMessages([
                     'estado' => 'El estado solo puede ser Activo o Inactivo.',
                 ]);
@@ -93,6 +113,7 @@ class Proveedor extends Model
             return false;
         }
 
+        // Persona natural: cédula válida + 001
         if ($tercerDigito >= 0 && $tercerDigito <= 5) {
             $cedula = substr($ruc, 0, 10);
             $establecimiento = substr($ruc, 10, 3);
@@ -100,10 +121,12 @@ class Proveedor extends Model
             return self::validarCedulaEcuador($cedula) && $establecimiento === '001';
         }
 
+        // Entidad pública
         if ($tercerDigito === 6) {
             return self::validarRucPublico($ruc);
         }
 
+        // Sociedad privada
         if ($tercerDigito === 9) {
             return self::validarRucPrivado($ruc);
         }

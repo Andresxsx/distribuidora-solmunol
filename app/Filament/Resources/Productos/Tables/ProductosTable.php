@@ -15,59 +15,77 @@ class ProductosTable
     {
         return $table
             ->columns([
-    TextColumn::make('codigo')
-        ->label('Código')
-        ->searchable()
-        ->sortable(),
+                TextColumn::make('codigo')
+                    ->label('Código')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('nombre')
-        ->label('Producto')
-        ->searchable()
-        ->sortable(),
+                TextColumn::make('nombre')
+                    ->label('Producto')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('categoria')
-        ->label('Categoría')
-        ->searchable(),
+                TextColumn::make('categoria')
+                    ->label('Categoría')
+                    ->searchable()
+                    ->sortable(),
 
-    TextColumn::make('stock_actual')
-        ->label('Stock actual')
-        ->badge()
-        ->sortable(),
+                TextColumn::make('stock_actual')
+                    ->label('Stock actual')
+                    ->badge()
+                    ->color(fn ($state, $record): string => match (true) {
+                        (int) $state <= 0 => 'danger',
+                        (int) $state <= (int) $record->stock_minimo => 'warning',
+                        default => 'success',
+                    })
+                    ->sortable(),
 
-    TextColumn::make('stock_minimo')
-        ->label('Stock mínimo')
-        ->sortable(),
+                TextColumn::make('stock_minimo')
+                    ->label('Stock mínimo')
+                    ->sortable(),
 
-    TextColumn::make('precio_compra')
-        ->label('Precio compra')
-        ->money('USD')
-        ->sortable(),
+                TextColumn::make('precio_compra')
+                    ->label('Precio compra')
+                    ->money('USD')
+                    ->sortable(),
 
-    TextColumn::make('precio_venta')
-        ->label('Precio venta')
-        ->money('USD')
-        ->sortable(),
+                TextColumn::make('precio_venta')
+                    ->label('Precio venta')
+                    ->money('USD')
+                    ->sortable(),
 
-    TextColumn::make('estado')
-        ->label('Estado')
-        ->badge(),
+                TextColumn::make('estado')
+                    ->label('Estado')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'Activo' => 'success',
+                        'Inactivo' => 'danger',
+                        default => 'gray',
+                    }),
 
-    TextColumn::make('created_at')
-        ->label('Registrado')
-        ->dateTime()
-        ->sortable(),
-])
+                TextColumn::make('created_at')
+                    ->label('Registrado')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable(),
+            ])
             ->filters([
                 //
             ])
             ->recordActions([
-                ViewAction::make(),
-                EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
-            ]);
+    ViewAction::make()
+        ->label('Ver'),
+
+    EditAction::make()
+        ->label('Editar')
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+])
+->toolbarActions([
+    BulkActionGroup::make([
+        DeleteBulkAction::make()
+            ->label('Eliminar seleccionados')
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ])
+        ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+]);
     }
 }

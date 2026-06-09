@@ -12,10 +12,12 @@ class EditCompra extends EditRecord
     protected static string $resource = CompraResource::class;
 
     protected function getHeaderActions(): array
-    {
-        return [
-            ViewAction::make(),
-            DeleteAction::make(),
-        ];
-    }
+{
+    return [
+        ViewAction::make(),
+
+        DeleteAction::make()
+            ->visible(fn () => auth()->user()?->puedeGestionarRegistros() ?? false),
+    ];
+}
 }

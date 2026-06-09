@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\FormatoDatos;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -34,13 +35,28 @@ class Venta extends Model
                 $venta->numero_venta = self::generarNumeroVenta();
             }
 
-            if (!$venta->user_id && Auth::check()) {
+            if (! $venta->user_id && Auth::check()) {
                 $venta->user_id = Auth::id();
             }
         });
 
         static::saving(function (Venta $venta) {
-            if (!$venta->fecha) {
+            /*
+            |--------------------------------------------------------------------------
+            | 1. Normalización de datos
+            |--------------------------------------------------------------------------
+            */
+
+            $venta->numero_venta = FormatoDatos::codigo($venta->numero_venta);
+            $venta->observacion = FormatoDatos::oracion($venta->observacion);
+
+            /*
+            |--------------------------------------------------------------------------
+            | 2. Validaciones generales
+            |--------------------------------------------------------------------------
+            */
+
+            if (! $venta->fecha) {
                 throw ValidationException::withMessages([
                     'fecha' => 'La fecha de venta es obligatoria.',
                 ]);
@@ -54,7 +70,7 @@ class Venta extends Model
 
             $cliente = Cliente::find($venta->cliente_id);
 
-            if (!$cliente || $cliente->estado !== 'Activo') {
+            if (! $cliente || $cliente->estado !== 'Activo') {
                 throw ValidationException::withMessages([
                     'cliente_id' => 'Seleccione un cliente activo.',
                 ]);
@@ -62,7 +78,7 @@ class Venta extends Model
 
             $producto = Producto::find($venta->producto_id);
 
-            if (!$producto || $producto->estado !== 'Activo') {
+            if (! $producto || $producto->estado !== 'Activo') {
                 throw ValidationException::withMessages([
                     'producto_id' => 'Seleccione un producto activo.',
                 ]);
@@ -80,6 +96,15 @@ class Venta extends Model
                 ]);
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | 3. Validación de stock
+            |--------------------------------------------------------------------------
+            | Si es venta nueva, usa el stock actual.
+            | Si se edita la misma venta con el mismo producto, devuelve virtualmente
+            | la cantidad anterior para calcular el stock disponible real.
+            */
+
             $stockDisponible = (int) $producto->stock_actual;
 
             if (
@@ -91,15 +116,17 @@ class Venta extends Model
 
             if ((int) $venta->cantidad > $stockDisponible) {
                 throw ValidationException::withMessages([
-                    'cantidad' => 'No hay suficiente stock disponible. Stock actual disponible: ' . $stockDisponible,
+                    'cantidad' => 'No hay suficiente stock disponible. Stock actual disponible: ' . $stockDisponible . '.',
                 ]);
             }
 
-            $venta->total = round((int) $venta->cantidad * (float) $venta->precio_unitario, 2);
+            /*
+            |--------------------------------------------------------------------------
+            | 4. Cálculo automático
+            |--------------------------------------------------------------------------
+            */
 
-            if ($venta->observacion) {
-                $venta->observacion = trim(preg_replace('/\s+/', ' ', $venta->observacion));
-            }
+            $venta->total = round((int) $venta->cantidad * (float) $venta->precio_unitario, 2);
         });
 
         static::created(function (Venta $venta) {
@@ -108,7 +135,7 @@ class Venta extends Model
             if ($producto) {
                 $stockAnterior = (int) $producto->stock_actual;
 
-                $producto->decrement('stock_actual', $venta->cantidad);
+                $producto->decrement('stock_actual', (int) $venta->cantidad);
                 $producto->refresh();
 
                 MovimientoBodega::registrar([
@@ -116,7 +143,7 @@ class Venta extends Model
                     'tipo_movimiento' => 'Salida',
                     'origen' => 'Venta',
                     'documento_referencia' => $venta->numero_venta,
-                    'cantidad' => $venta->cantidad,
+                    'cantidad' => (int) $venta->cantidad,
                     'stock_anterior' => $stockAnterior,
                     'stock_nuevo' => (int) $producto->stock_actual,
                     'user_id' => $venta->user_id,
@@ -126,10 +153,16 @@ class Venta extends Model
         });
 
         static::updated(function (Venta $venta) {
-            $productoAnteriorId = $venta->getOriginal('producto_id');
+            $productoAnteriorId = (int) $venta->getOriginal('producto_id');
             $cantidadAnterior = (int) $venta->getOriginal('cantidad');
 
-            if ((int) $productoAnteriorId === (int) $venta->producto_id) {
+            /*
+            |--------------------------------------------------------------------------
+            | Caso 1: Se edita la venta pero se mantiene el mismo producto
+            |--------------------------------------------------------------------------
+            */
+
+            if ($productoAnteriorId === (int) $venta->producto_id) {
                 $producto = Producto::find($venta->producto_id);
 
                 if ($producto) {
@@ -177,6 +210,12 @@ class Venta extends Model
                 return;
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | Caso 2: Se cambió el producto de la venta
+            |--------------------------------------------------------------------------
+            */
+
             $productoAnterior = Producto::find($productoAnteriorId);
 
             if ($productoAnterior) {
@@ -203,7 +242,7 @@ class Venta extends Model
             if ($productoNuevo) {
                 $stockAnterior = (int) $productoNuevo->stock_actual;
 
-                $productoNuevo->decrement('stock_actual', $venta->cantidad);
+                $productoNuevo->decrement('stock_actual', (int) $venta->cantidad);
                 $productoNuevo->refresh();
 
                 MovimientoBodega::registrar([
@@ -211,7 +250,7 @@ class Venta extends Model
                     'tipo_movimiento' => 'Ajuste',
                     'origen' => 'Venta',
                     'documento_referencia' => $venta->numero_venta,
-                    'cantidad' => $venta->cantidad,
+                    'cantidad' => (int) $venta->cantidad,
                     'stock_anterior' => $stockAnterior,
                     'stock_nuevo' => (int) $productoNuevo->stock_actual,
                     'user_id' => $venta->user_id,
@@ -226,7 +265,7 @@ class Venta extends Model
             if ($producto) {
                 $stockAnterior = (int) $producto->stock_actual;
 
-                $producto->increment('stock_actual', $venta->cantidad);
+                $producto->increment('stock_actual', (int) $venta->cantidad);
                 $producto->refresh();
 
                 MovimientoBodega::registrar([
@@ -234,7 +273,7 @@ class Venta extends Model
                     'tipo_movimiento' => 'Entrada',
                     'origen' => 'Corrección',
                     'documento_referencia' => $venta->numero_venta,
-                    'cantidad' => $venta->cantidad,
+                    'cantidad' => (int) $venta->cantidad,
                     'stock_anterior' => $stockAnterior,
                     'stock_nuevo' => (int) $producto->stock_actual,
                     'user_id' => $venta->user_id,
