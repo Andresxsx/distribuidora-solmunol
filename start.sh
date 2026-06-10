@@ -1,14 +1,16 @@
 #!/bin/sh
 
-php artisan config:clear
-php artisan view:clear
-php artisan cache:clear
+php artisan config:clear || true
+php artisan view:clear || true
+php artisan cache:clear || true
 
 php artisan migrate --force
 
 php artisan db:seed --class=UsuariosRolesSeeder --force || true
 
 php artisan storage:link || true
+
+php artisan filament:assets --force || true
 
 php artisan config:cache
 php artisan view:cache
