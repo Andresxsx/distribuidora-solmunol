@@ -10,36 +10,31 @@ class UsuariosRolesSeeder extends Seeder
 {
     public function run(): void
     {
-        $usuarios = [
+        User::updateOrCreate(
+            ['email' => 'admin@erpsolis.com'],
             [
                 'name' => 'Administrador',
-                'email' => 'admin@erpsolis.com',
-                'password' => 'Admin12345',
+                'password' => Hash::make('12345678'),
                 'rol' => 'Administrador',
-            ],
-            [
-                'name' => 'Usuario Operativo',
-                'email' => 'operativo@erpsolis.com',
-                'password' => 'Operativo12345',
-                'rol' => 'Operativo',
-            ],
-            [
-                'name' => 'Usuario Directivo',
-                'email' => 'directivo@erpsolis.com',
-                'password' => 'Directivo12345',
-                'rol' => 'Directivo',
-            ],
-        ];
+            ]
+        );
 
-        foreach ($usuarios as $usuario) {
-            User::updateOrCreate(
-                ['email' => $usuario['email']],
-                [
-                    'name' => $usuario['name'],
-                    'password' => Hash::make($usuario['password']),
-                    'rol' => $usuario['rol'],
-                ]
-            );
-        }
+        User::updateOrCreate(
+            ['email' => 'directivo@erpsolis.com'],
+            [
+                'name' => 'Directivo',
+                'password' => Hash::make('12345678'),
+                'rol' => 'Directivo',
+            ]
+        );
+
+        User::updateOrCreate(
+            ['email' => 'operativo@erpsolis.com'],
+            [
+                'name' => 'Operativo',
+                'password' => Hash::make('12345678'),
+                'rol' => 'Operativo',
+            ]
+        );
     }
 }
